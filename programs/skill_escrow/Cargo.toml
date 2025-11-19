@@ -1,8 +1,14 @@
 [package]
 name = "skill_escrow"
 version = "0.1.0"
-description = "Match escrow and settlement for skill-based games"
+description = "Match escrow and settlement for skill-based games on Solana"
 edition = "2021"
+authors = ["Skill Gaming Contributors"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/yourusername/2player-blockchain-framework"
+keywords = ["solana", "blockchain", "gaming", "escrow", "wagering"]
+categories = ["cryptography::cryptocurrencies", "game-development"]
 
 [lib]
 crate-type = ["cdylib", "lib"]
@@ -19,3 +25,7 @@ default = []
 anchor-lang = "0.30.1"
 anchor-spl = "0.30.1"
 solana-program = "1.18.22"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

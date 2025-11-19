@@ -7,6 +7,20 @@ members = [
 
 resolver = "2"
 
+[workspace.package]
+version = "0.1.0"
+authors = ["Skill Gaming Contributors"]
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/yourusername/2player-blockchain-framework"
+homepage = "https://github.com/yourusername/2player-blockchain-framework"
+documentation = "https://docs.rs/skill-gaming"
+
+[workspace.metadata.docs.rs]
+# Configuration for docs.rs builds
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
 [profile.release]
 overflow-checks = true
 lto = "fat"

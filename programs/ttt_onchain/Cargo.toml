@@ -1,8 +1,14 @@
 [package]
 name = "ttt_onchain"
 version = "0.1.0"
-description = "On-chain Tic-Tac-Toe game logic with trustless settlement"
+description = "On-chain Tic-Tac-Toe game logic with trustless settlement on Solana"
 edition = "2021"
+authors = ["Skill Gaming Contributors"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/yourusername/2player-blockchain-framework"
+keywords = ["solana", "blockchain", "gaming", "tic-tac-toe", "onchain"]
+categories = ["cryptography::cryptocurrencies", "game-development"]
 
 [lib]
 crate-type = ["cdylib", "lib"]
@@ -19,3 +25,7 @@ default = []
 anchor-lang = "0.30.1"
 solana-program = "1.18.22"
 skill_escrow = { path = "../skill_escrow", features = ["cpi"] }
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
