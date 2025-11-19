@@ -562,39 +562,48 @@ Result: InsufficientBalance error
 
 ### Error 6000: `MatchNotActive`
 
-**Message:** "Match is not active"
+**Message:** "Match is not active. Ensure match is fully funded before creating game"
 
 **Cause:**
-Referenced match isn't in Active status.
+Referenced match isn't in Active status (status != 1).
 
 **Resolution:**
-- Ensure match is fully funded and started
-- Check match status in escrow program
+- Ensure match is fully funded via escrow.fund for both players
+- Check match status: `match.status == 1` (Active)
+- Match must be Active before calling init_game
+
+**When it occurs:**
+- `init_game` instruction when match.status != Active
 
 ---
 
 ### Error 6001: `GameNotActive`
 
-**Message:** "Game is not active"
+**Message:** "Game is not active. Cannot make moves on finished game"
 
 **Cause:**
-Game already finished.
+Game already finished (status == Finished).
 
 **Resolution:**
 - Can't make moves after game ends
-- Check `game.status == Active`
+- Check `game.status == 0` (Active) before playing
+- Resolve the finished game or start a new one
+
+**When it occurs:**
+- `play` instruction when game.status == Finished
+- `timeout` instruction when game.status == Finished
 
 ---
 
 ### Error 6002: `InvalidPosition`
 
-**Message:** "Invalid position (must be 0-8)"
+**Message:** "Invalid position. Must be 0-8 (see board layout in docs)"
 
 **Cause:**
-Position >= 9 on Tic-Tac-Toe board.
+Position parameter >= 9 on Tic-Tac-Toe board.
 
 **Resolution:**
-- Use position 0-8
+- Use position 0-8 only
 - Board layout:
   ```
   0 | 1 | 2
@@ -604,65 +613,85 @@ Position >= 9 on Tic-Tac-Toe board.
   6 | 7 | 8
   ```
 
+**When it occurs:**
+- `play` instruction with position >= 9
+
 ---
 
 ### Error 6003: `PositionOccupied`
 
-**Message:** "Position already occupied"
+**Message:** "Position already occupied. Choose an empty square"
 
 **Cause:**
 Trying to place piece on non-empty square.
 
 **Resolution:**
-- Choose an empty position
-- Check `game.board[position] == 0`
+- Choose an empty position where `game.board[position] == 0`
+- Check board state before attempting move
+- UI should only allow clicks on empty squares
+
+**When it occurs:**
+- `play` instruction when board[position] != 0
 
 ---
 
 ### Error 6004: `NotYourTurn`
 
-**Message:** "Not your turn"
+**Message:** "Not your turn. Wait for opponent to move"
 
 **Cause:**
-Wrong player making move.
+Wrong player attempting to make a move.
 
 **Resolution:**
 - Wait for your turn
-- Check `game.current_turn`: 1 = X, 2 = O
-- X = player_x, O = player_o
+- Check `game.current_turn`: 1 = X (player_x), 2 = O (player_o)
+- X always goes first
+
+**When it occurs:**
+- `play` instruction when signer != expected player for current_turn
 
 ---
 
 ### Error 6005: `GameNotFinished`
 
-**Message:** "Game is not finished"
+**Message:** "Game is not finished. Cannot resolve until game ends"
 
 **Cause:**
 Attempting to resolve game that's still in progress.
 
 **Resolution:**
-- Wait for game to end (win or draw)
-- Check `game.status == Finished`
+- Wait for game to end (win, draw, or timeout)
+- Check `game.status == 1` (Finished)
+- Game finishes when:
+  - 3 in a row achieved
+  - Board full (draw)
+  - Player times out
+
+**When it occurs:**
+- `resolve_if_complete` instruction when game.status == Active
 
 ---
 
 ### Error 6006: `MoveTimeout`
 
-**Message:** "Move timeout"
+**Message:** "Move timeout. Player exceeded deadline"
 
 **Cause:**
-Player took too long to make move.
+Player took too long to make move (Clock.slot > deadline_slot).
 
 **Resolution:**
-- Make moves within deadline
-- Opponent can claim timeout win
-- Check `Clock.slot <= game.deadline_slot`
+- Make moves within deadline (game.deadline_slot)
+- Opponent can claim timeout win via `timeout` instruction
+- Deadline resets after each move
+
+**When it occurs:**
+- `play` instruction when Clock.slot > game.deadline_slot
 
 ---
 
 ### Error 6007: `NotTimedOut`
 
-**Message:** "Game has not timed out yet"
+**Message:** "Game has not timed out yet. Wait until deadline passes"
 
 **Cause:**
 Attempting to claim timeout before deadline passed.
@@ -670,19 +699,96 @@ Attempting to claim timeout before deadline passed.
 **Resolution:**
 - Wait for deadline_slot to pass
 - Check `Clock.slot > game.deadline_slot`
+- Current slot must exceed deadline
+
+**When it occurs:**
+- `timeout` instruction when Clock.slot <= game.deadline_slot
 
 ---
 
 ### Error 6008: `NotYourTimeout`
 
-**Message:** "You cannot claim this timeout"
+**Message:** "You cannot claim this timeout. Only non-timeout player can claim"
 
 **Cause:**
-Player whose turn it is trying to claim timeout.
+Player whose turn it is trying to claim timeout (can't claim own timeout).
 
 **Resolution:**
 - Only non-timeout player can claim
-- If it's your turn and you timed out, opponent claims
+- If it's your turn and you timed out, opponent must claim
+- If it's opponent's turn and they timed out, you can claim
+
+**Logic:**
+- current_turn == 1 (X's turn timed out): Only player_o can claim
+- current_turn == 2 (O's turn timed out): Only player_x can claim
+
+**When it occurs:**
+- `timeout` instruction when claimant is the timeout player
+
+---
+
+### Error 6009: `InvalidTimeout`
+
+**Message:** "Invalid timeout. Must be between 1 minute and 6 hours (150 - 54,000 slots)"
+
+**Cause:**
+timeout_slots parameter outside valid range.
+
+**Resolution:**
+- Use timeout_slots between MIN_TIMEOUT_SLOTS (150) and MAX_TIMEOUT_SLOTS (54,000)
+- 150 slots ≈ 1 minute (at 400ms/slot)
+- 54,000 slots ≈ 6 hours
+
+**Why these limits:**
+- Minimum: Ensures reasonable time to make moves
+- Maximum: Prevents excessively slow games
+
+**Example valid values:**
+- 900 slots = ~6 minutes
+- 2,250 slots = ~15 minutes
+- 9,000 slots = ~1 hour
+- 54,000 slots = ~6 hours
+
+**When it occurs:**
+- `init_game` instruction with timeout_slots out of bounds
+
+---
+
+### Error 6010: `MathOverflow`
+
+**Message:** "Mathematical operation caused an overflow"
+
+**Cause:**
+Arithmetic overflow in deadline calculation.
+
+**Resolution:**
+- Use reasonable timeout_slots values
+- This is extremely rare with valid timeout bounds
+- Indicates clock.slot + timeout_slots > u64::MAX
+
+**When it occurs:**
+- `init_game` deadline calculation
+- `play` next deadline calculation
+
+---
+
+### Error 6011: `InvalidTokenProgram`
+
+**Message:** "Invalid token program. Must use classic SPL Token program"
+
+**Cause:**
+Provided token program ID doesn't match classic SPL Token program.
+
+**Resolution:**
+- Use `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`
+- Don't use Token-2022 or other token programs
+
+**Why this exists:**
+Platform designed for classic SPL tokens for compatibility with escrow.
+
+**When it occurs:**
+- `resolve_if_complete` with wrong token program
+- `timeout` with wrong token program
 
 ---
 
