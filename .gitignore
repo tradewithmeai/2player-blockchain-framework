@@ -12,9 +12,18 @@ build/
 .env.local
 .env.*.local
 
-# IDL
+# IDL and build artifacts
 **/*.so
-**/*.json
+target/idl/
+target/types/
+.anchor/
+
+# Ignore generated IDL but keep package.json and tsconfig.json
+!package.json
+!**/package.json
+!tsconfig.json
+!**/tsconfig.json
+!**/prisma/schema.prisma
 
 # IDEs
 .idea/
