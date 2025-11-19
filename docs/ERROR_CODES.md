@@ -242,16 +242,22 @@ Fee >= 10000 (100%).
 
 ---
 
-### Error 6001: `InvalidStake`
+### Error 6001: `StakeTooSmall`
 
-**Message:** "Invalid stake amount"
+**Message:** "Stake too small. Minimum stake is 1 SKILL (1,000,000 atomic units)"
 
 **Cause:**
-Stake amount is zero.
+Attempting to create a match with stake < MIN_STAKE_AMOUNT (1,000,000 atomic units = 1 SKILL).
 
 **Resolution:**
-- Use a positive stake amount
-- Minimum 1 SKILL (1,000,000 atomic units) recommended
+- Use a stake of at least 1 SKILL (1,000,000 atomic units)
+- Typical stakes: 1-1000 SKILL for normal gameplay
+
+**Why this exists:**
+Prevents dust attacks and ensures economically meaningful matches.
+
+**When it occurs:**
+- `create_match` instruction with stake < 1,000,000
 
 ---
 
@@ -434,7 +440,7 @@ Attempting timeout claim before expiry_slot reached.
 
 ### Error 6014: `MathOverflow`
 
-**Message:** "Math overflow"
+**Message:** "Mathematical operation caused an overflow"
 
 **Cause:**
 Arithmetic overflow in fee/settlement calculations.
@@ -442,6 +448,113 @@ Arithmetic overflow in fee/settlement calculations.
 **Resolution:**
 - Use reasonable stake amounts
 - This is rare with normal values
+
+---
+
+### Error 6015: `Paused`
+
+**Message:** "Match creation is currently paused by admin"
+
+**Cause:**
+Admin has paused match creation via `set_pause`.
+
+**Resolution:**
+- Wait for admin to unpause operations
+- Contact platform administrators
+- Check announcements for maintenance schedule
+
+**When it occurs:**
+- `create_match` instruction while config.paused = true
+
+**Note:** Admin can still update config and unpause while paused. Existing matches can still be funded and settled.
+
+---
+
+### Error 6016: `InvalidMint`
+
+**Message:** "Invalid mint. Must use configured SKILL mint"
+
+**Cause:**
+Provided mint address doesn't match the configured `skill_mint` in escrow config.
+
+**Resolution:**
+- Use the correct SKILL mint address
+- Query config account to get correct mint: `config.skill_mint`
+- Don't attempt to use alternative tokens
+
+**Security:**
+This prevents attacks using fake SKILL tokens to fund matches.
+
+**When it occurs:**
+- `create_match` with wrong mint
+- `fund` with wrong token account mint
+- Any operation with mismatched mint
+
+---
+
+### Error 6017: `InvalidExpiry`
+
+**Message:** "Invalid expiry. Must be between 10 minutes and 24 hours (1,500 - 216,000 slots)"
+
+**Cause:**
+Expiry slots parameter outside valid range.
+
+**Resolution:**
+- Use expiry_slots between MIN_EXPIRY_SLOTS (1,500) and MAX_EXPIRY_SLOTS (216,000)
+- 1,500 slots ≈ 10 minutes (at 400ms/slot)
+- 216,000 slots ≈ 24 hours
+
+**Why these limits:**
+- Minimum: Ensures reasonable time for both players to fund
+- Maximum: Prevents excessively long-lived matches
+
+**Example valid values:**
+- 3,000 slots = ~20 minutes
+- 9,000 slots = ~1 hour
+- 54,000 slots = ~6 hours
+- 216,000 slots = ~24 hours
+
+---
+
+### Error 6018: `InvalidAmount`
+
+**Message:** "Amount must be greater than zero"
+
+**Cause:**
+Calculation resulted in zero tokens, usually in fee calculations.
+
+**Resolution:**
+- This is rare and usually indicates an implementation error
+- Check that fee calculations don't round to zero
+- Ensure stake amounts are reasonable
+
+**When it occurs:**
+- Internal fee calculations in settlement
+- Usually with extremely small stakes
+
+---
+
+### Error 6019: `InsufficientBalance`
+
+**Message:** "Insufficient SKILL token balance"
+
+**Cause:**
+Player's token account doesn't have enough SKILL tokens to fund the match.
+
+**Resolution:**
+1. Check token balance: Query player's SKILL token account
+2. Ensure balance >= match stake amount
+3. Deposit more SOL and mint SKILL via treasury if needed
+
+**When it occurs:**
+- `fund` instruction when player_skill_ata.amount < match.stake
+
+**Example:**
+```
+Match stake: 10 SKILL (10,000,000 atomic units)
+Player balance: 5 SKILL (5,000,000 atomic units)
+Result: InsufficientBalance error
+```
 
 ---
 
