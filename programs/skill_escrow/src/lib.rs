@@ -907,7 +907,7 @@ pub struct CreateMatch<'info> {
     /// Escrow configuration
     #[account(
         seeds = [b"config"],
-        bump = config.bump
+        bump
     )]
     pub config: Account<'info, Config>,
 
@@ -1156,7 +1156,7 @@ pub struct WithdrawFee<'info> {
     /// Escrow configuration (admin check via has_one)
     #[account(
         seeds = [b"config"],
-        bump = config.bump,
+        bump,
         has_one = admin
     )]
     pub config: Account<'info, Config>,
@@ -1185,7 +1185,7 @@ pub struct SetPause<'info> {
     #[account(
         mut,
         seeds = [b"config"],
-        bump = config.bump,
+        bump,
         has_one = admin
     )]
     pub config: Account<'info, Config>,

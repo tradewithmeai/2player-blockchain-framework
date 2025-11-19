@@ -472,17 +472,17 @@ pub struct DepositSolAndMintSkill<'info> {
     /// Treasury configuration
     #[account(
         seeds = [b"config"],
-        bump = config.treasury_bump,
+        bump,
     )]
     pub config: Account<'info, Config>,
 
     /// Treasury SOL vault
+    /// CHECK: PDA that holds backing SOL, validated by seeds
     #[account(
         mut,
         seeds = [b"treasury_sol_vault"],
         bump
     )]
-    /// CHECK: PDA that holds backing SOL, validated by seeds
     pub treasury_sol_vault: AccountInfo<'info>,
 
     /// SKILL token mint (must match config)
@@ -516,17 +516,17 @@ pub struct RedeemSkillForSol<'info> {
     /// Treasury configuration
     #[account(
         seeds = [b"config"],
-        bump = config.treasury_bump,
+        bump,
     )]
     pub config: Account<'info, Config>,
 
     /// Treasury SOL vault
+    /// CHECK: PDA that holds backing SOL, validated by seeds
     #[account(
         mut,
         seeds = [b"treasury_sol_vault"],
         bump
     )]
-    /// CHECK: PDA that holds backing SOL, validated by seeds
     pub treasury_sol_vault: AccountInfo<'info>,
 
     /// SKILL token mint (must match config)
