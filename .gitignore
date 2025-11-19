@@ -1,0 +1,39 @@
+# Anchor
+.anchor
+target/
+test-ledger/
+.DS_Store
+
+# Node
+node_modules/
+dist/
+build/
+.env
+.env.local
+.env.*.local
+
+# IDL
+**/*.so
+**/*.json
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Misc
+.turbo
+.next/
+out/

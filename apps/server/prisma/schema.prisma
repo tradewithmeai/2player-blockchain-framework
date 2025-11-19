@@ -1,0 +1,79 @@
+// Prisma schema for Skill Gaming platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User profiles (username <-> wallet)
+model Profile {
+  id            String   @id @default(uuid())
+  walletPubkey  String   @unique @map("wallet_pubkey")
+  username      String   @unique @db.Citext
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  matchesAsPlayer1 Match[] @relation("Player1Matches")
+  matchesAsPlayer2 Match[] @relation("Player2Matches")
+  moves            Move[]
+
+  @@map("profiles")
+}
+
+// Matches (off-chain tracking)
+model Match {
+  id         String      @id @default(uuid())
+  matchPda   String      @unique @map("match_pda")
+  matchId    String      @unique @map("match_id") // On-chain match ID (hex)
+  mode       String // "turn_based" or "realtime"
+  stake      BigInt // In SKILL atomic units
+  playerA    String      @map("player_a")
+  playerB    String?     @map("player_b")
+  status     MatchStatus @default(CREATED)
+  createdAt  DateTime    @default(now()) @map("created_at")
+  updatedAt  DateTime    @updatedAt @map("updated_at")
+  settledAt  DateTime?   @map("settled_at")
+  winner     String? // Wallet pubkey or null for draw
+
+  player1 Profile @relation("Player1Matches", fields: [playerA], references: [walletPubkey])
+  player2 Profile? @relation("Player2Matches", fields: [playerB], references: [walletPubkey])
+  moves   Move[]
+
+  @@map("matches")
+}
+
+enum MatchStatus {
+  CREATED
+  ACTIVE
+  SETTLED
+  CANCELLED
+}
+
+// Game moves (for replay and verification)
+model Move {
+  id        String   @id @default(uuid())
+  matchId   String   @map("match_id")
+  ply       Int // Move number (0-indexed)
+  position  Int // Board position for TTT (0-8)
+  actor     String // Wallet pubkey
+  timestamp DateTime @default(now())
+
+  match   Match   @relation(fields: [matchId], references: [id])
+  profile Profile @relation(fields: [actor], references: [walletPubkey])
+
+  @@map("moves")
+}
+
+// SIWS challenges (ephemeral)
+model SiwsChallenge {
+  id            String   @id @default(uuid())
+  walletPubkey  String   @map("wallet_pubkey")
+  nonce         String
+  expiresAt     DateTime @map("expires_at")
+
+  @@map("siws_challenges")
+}
